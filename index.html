@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MARPOL Voyage Control</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="Ocean Deep">
+<div id="app">
+
+  <header>
+    <div>
+      <h1>⚓ MARPOL VOYAGE CONTROL</h1>
+      <div class="sub">Offline compliance dashboard · port index · route checker</div>
+    </div>
+    <div class="right">
+      <select id="themeSelect">
+        <option>Ocean Deep</option>
+        <option>Night Bridge</option>
+        <option>Chart Paper</option>
+      </select>
+      <button class="pill-btn pill-user" id="userBtn">👤 USER</button>
+      <button class="pill-btn pill-admin" id="adminBtn">🛡 ADMIN</button>
+    </div>
+  </header>
+
+  <nav id="tabs">
+    <button data-page="dashboard" class="active">Dashboard</button>
+    <button data-page="worldmap">World Map</button>
+    <button data-page="gisimport">GIS Import</button>
+    <button data-page="portdata">Port Data</button>
+    <button data-page="marpolareas">MARPOL Areas</button>
+    <button data-page="position">Position Check</button>
+    <button data-page="routeimport">Route Import</button>
+    <button data-page="routecheck">Route Check</button>
+    <button data-page="simulator">Simulator</button>
+    <button data-page="reports">Reports</button>
+    <button data-page="settings">Settings</button>
+  </nav>
+
+  <main>
+
+    <div class="page active" id="page-dashboard">
+      <h2>Dashboard</h2>
+      <div class="desc">Vessel: <strong>MV NORTHERN STAR</strong> — click a tile to open that section.</div>
+      <div class="dashboard-grid">
+        <div class="tile" data-page="worldmap"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">🗺</div><div class="tile-title">WORLD MAP</div><div class="tile-sub">Offline route view</div></div></div>
+        <div class="tile" data-page="gisimport"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">📥</div><div class="tile-title">GIS IMPORT</div><div class="tile-sub">.shp / .dbf layers</div></div></div>
+        <div class="tile" data-page="portdata"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">⚓</div><div class="tile-title">PORT DATA</div><div class="tile-sub">Port lookup</div></div></div>
+        <div class="tile" data-page="marpolareas"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">🌊</div><div class="tile-title">MARPOL AREAS</div><div class="tile-sub">Special area layers</div></div></div>
+        <div class="tile" data-page="position"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">📍</div><div class="tile-title">POSITION CHECK</div><div class="tile-sub">Single-location check</div></div></div>
+        <div class="tile" data-page="routeimport"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">📥</div><div class="tile-title">ROUTE IMPORT</div><div class="tile-sub">Waypoints, speed, ETD</div></div></div>
+        <div class="tile" data-page="routecheck"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">🧭</div><div class="tile-title">ROUTE CHECK</div><div class="tile-sub">Whole-voyage check</div></div></div>
+        <div class="tile" data-page="simulator"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">▶</div><div class="tile-title">SIMULATOR</div><div class="tile-sub">Run compliance playback</div></div></div>
+        <div class="tile" data-page="reports"><div class="tile-head"></div><div class="tile-body"><div class="tile-icon">📄</div><div class="tile-title">REPORTS</div><div class="tile-sub">Voyage compliance report</div></div></div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="n" id="kpiAreas">17</div><div class="l">MARPOL / ECA areas loaded</div></div>
+        <div class="kpi"><div class="n" id="kpiWaypoints">0</div><div class="l">Waypoints loaded</div></div>
+        <div class="kpi"><div class="n">3</div><div class="l">Import formats (CSV now; Excel/RTZ next phase)</div></div>
+        <div class="kpi"><div class="n">100%</div><div class="l">Offline — no server, no internet</div></div>
+      </div>
+    </div>
+
+    <div class="page" id="page-worldmap">
+      <h2>World Map</h2>
+      <div class="desc">Drag to pan, scroll to zoom. Toggle layers on GIS Import to control what's drawn here.</div>
+      <div class="card">
+        <button class="action secondary" id="mapFullWorldBtn">Zoom: Full World</button>
+        <button class="action secondary" id="mapFitRouteBtn">Zoom: Fit Route</button>
+        <label style="margin-left:14px;"><input type="checkbox" id="showAreasChk" checked> Show MARPOL/ECA area outlines</label>
+      </div>
+      <div class="card" style="padding:0;"><canvas id="mapCanvas" style="width:100%;display:block;border-radius:10px;"></canvas></div>
+    </div>
+
+    <div class="page" id="page-gisimport">
+      <h2>GIS Import</h2>
+      <div class="desc">Import .shp files (with a matching .dbf alongside for names/labels) to build up map layers - country outlines, coastline, port indexes. Each import becomes its own toggleable layer.</div>
+      <div class="card">
+        <label>.shp file</label><br>
+        <input type="file" id="shpFileInput" accept=".shp"><br><br>
+        <label>.dbf file (optional, same folder as the .shp, gives you names)</label><br>
+        <input type="file" id="dbfFileInput" accept=".dbf"><br><br>
+        <button class="action" id="importShpBtn">Import Shapefile</button>
+        <div class="hint" id="shpImportStatus"></div>
+      </div>
+      <div class="card"><h3>Layers</h3><div id="layerList"></div></div>
+    </div>
+
+    <div class="page" id="page-portdata">
+      <h2>Port Data</h2>
+      <div class="desc">Searches every POINT-type layer you've imported (e.g. a world_port_index .shp). Import ports via GIS Import first if the list below is empty.</div>
+      <div class="card">
+        <input type="text" id="portSearchInput" placeholder="Port name contains...">
+        <button class="action" id="portSearchBtn">Search</button>
+        <button class="action secondary" id="portLocateBtn">Locate first result on map</button>
+        <div class="hint" id="portSearchStatus"></div>
+      </div>
+      <div class="card"><div id="portResults"></div></div>
+    </div>
+
+    <div class="page" id="page-marpolareas">
+      <h2>MARPOL Areas &amp; ECAs</h2>
+      <div class="desc">All 17 currently-loaded special areas and Emission Control Areas — same dataset as the Excel version's Geo_Areas sheet.</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Area</th><th>Applies to</th><th>Confidence</th><th>In force</th></tr></thead>
+          <tbody id="areasTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="page" id="page-position">
+      <h2>Position Check</h2>
+      <div class="desc">Checks one lat/lon against every MARPOL special area and ECA. Independent of any loaded route.</div>
+      <div class="card">
+        <label>Latitude (decimal, +N/-S)</label><br>
+        <input type="number" id="posLat" step="0.0001" value="0"><br><br>
+        <label>Longitude (decimal, +E/-W)</label><br>
+        <input type="number" id="posLon" step="0.0001" value="0"><br><br>
+        <button class="action" id="checkPositionBtn">Check Position</button>
+      </div>
+      <div id="positionResults"></div>
+    </div>
+
+    <div class="page" id="page-routeimport">
+      <h2>Route Import</h2>
+      <div class="desc">CSV/TXT, Excel (.xlsx), or ECDIS RTZ/RTZP (.rtz/.rtzp) - all parsed entirely in your browser, no server, no upload anywhere. Required: latitude, longitude, speed, ETD/ETA. Optional: waypoint name.</div>
+      <div class="card">
+        <button class="action" id="loadSampleBtn">Load Sample Route</button>
+        <input type="file" id="routeFileInput" accept=".csv,.txt,.xlsx,.rtz,.rtzp">
+        <div class="hint" id="importStatus"></div>
+      </div>
+      <div class="card"><h3>Import Log</h3><div id="importLog"></div></div>
+      <div class="card"><h3>Waypoint Table</h3><div id="routeTable"></div></div>
+    </div>
+
+    <div class="page" id="page-routecheck">
+      <h2>Route Check</h2>
+      <div class="desc">Samples every leg of the loaded route (not just the waypoints) and reports every MARPOL/ECA area entry and exit.</div>
+      <div class="card"><button class="action" id="runRouteCheckBtn">Run Route Check</button></div>
+      <div id="routeCheckResults"></div>
+    </div>
+
+    <div class="page" id="page-simulator">
+      <h2>Simulator</h2>
+      <div class="desc">Animated playback along the loaded route (needs timestamped waypoints - Reset picks up whatever's on Route Import). Uses the same compliance engine as Position/Route Check.</div>
+      <div class="card">
+        <button class="action" id="simPlayBtn">Play</button>
+        <button class="action secondary" id="simPauseBtn">Pause</button>
+        <button class="action secondary" id="simStepBtn">Step</button>
+        <button class="action secondary" id="simResetBtn">Reset</button>
+        <button class="action secondary" id="simInstantBtn">Instant</button>
+        &nbsp; Speed x <input type="number" id="simSpeedMult" value="1" min="1" style="width:60px;">
+        <div class="hint" id="simStatus"></div>
+      </div>
+      <div class="card">
+        <table>
+          <tr><td class="hint">Position</td><td id="simPosition">-</td><td class="hint">Course</td><td id="simCourse">-</td></tr>
+          <tr><td class="hint">Speed (kn)</td><td id="simSpeed">-</td><td class="hint">Sim time</td><td id="simTime">-</td></tr>
+          <tr><td class="hint">Distance run (nm)</td><td id="simDistRun">-</td><td class="hint">Distance to go (nm)</td><td id="simDistToGo">-</td></tr>
+          <tr><td class="hint">ETA</td><td id="simEta">-</td><td></td><td></td></tr>
+        </table>
+        <div id="simStatusBanner" class="status-banner" style="margin-top:12px;">Not started — click Reset</div>
+      </div>
+      <div class="card"><h3>Event Log</h3>
+        <table><thead><tr><th>Sim time</th><th>Event</th><th>Area</th><th>Position</th></tr></thead><tbody id="simEventLog"></tbody></table>
+      </div>
+    </div>
+    <div class="page" id="page-reports">
+      <h2>Reports</h2>
+      <div class="card">
+        <button class="action" id="genReportBtn">Generate Report</button>
+        <button class="action secondary" id="printReportBtn">Export as PDF (print)</button>
+      </div>
+      <div class="card" id="reportContent"></div>
+    </div>
+
+    <div class="page" id="page-settings">
+      <h2>Settings</h2>
+      <div class="card">
+        <h3>Project file</h3>
+        <p class="hint">Your route, theme, and Admin password are auto-saved in this browser. For a portable backup (or to move to another device), export/import a project file:</p>
+        <button class="action" id="exportBtn">Export project (.json)</button>
+        <input type="file" id="importFile" accept=".json">
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="geo_areas.js"></script>
+<script src="js/geo_engine.js"></script>
+<script src="js/state.js"></script>
+<script src="js/route_import.js"></script>
+<script src="js/compliance.js"></script>
+<script src="js/shp_import.js"></script>
+<script src="js/zip_reader.js"></script>
+<script src="js/xlsx_import.js"></script>
+<script src="js/rtz_import.js"></script>
+<script src="js/simulator.js"></script>
+<script src="js/report.js"></script>
+<script src="js/world_map.js"></script>
+<script src="js/port_data.js"></script>
+<script src="js/app.js"></script>
+<script>
+  window.addEventListener("DOMContentLoaded", () => {
+    const tbody = document.getElementById("areasTableBody");
+    tbody.innerHTML = GEO_AREAS.map(a =>
+      `<tr><td>${a.name}</td><td>${a.appliesTo}</td><td>${a.confidence}</td><td>${a.inForce}</td></tr>`
+    ).join("");
+  });
+</script>
+</body>
+</html>
